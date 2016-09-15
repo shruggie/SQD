@@ -1,4 +1,4 @@
--- Simple Quantar Dissector TCP
+-- Simple Quantar Dissector UDP for P25NX
 -- Copyright 2016 John Yaldwyn ZL4JY
 -- Release version 1.2 September 2016 for testing
 -- This dissector contains the resutls of investigative work by:
@@ -9,28 +9,27 @@
 -- the Free Software Foundation, either version 3 of the License, see:
 -- http://www.gnu.org/licenses/
 -- The use of Wireshark's API are covered by GPL
--- The TCP dissector looks at Cisco STUN encapsualted V.24 at port 1994.
+-- The UDP dissector looks at Cisco STUN encapsualted V.24 frames carried P25NX V2 style.
 --
 -- Create QV24 protocol and its fields
 --
-p_QV24T = Proto ("QV24_TCP","Quantar V.24 over TCP")
-local f_command = ProtoField.uint16("QV24T.command", "Command", base.HEX)
-local f_data = ProtoField.string("QV24T.data", "Data", FT_STRING)
+p_QV24T = Proto ("QV24_UDP_P25NX","Quantar V.24 over UDP P25NX")
+local f_command = ProtoField.uint16("QV24.command", "Command", base.HEX)
+local f_data = ProtoField.string("QV24.data", "Data", FT_STRING)
 -- 
-p_QV24T.fields = {f_command}
+p_QV24.fields = {f_command}
 -- 
 -- QV24 dissector function
 --
-function p_QV24T.dissector (buf, pkt, root)
+function p_QV24.dissector (buf, pkt, root)
 --
 -- Validate packet length is adequate, otherwise quit
 --
 if buf:len() == 0 then return end
-pkt.cols.protocol = p_QV24T.name
+pkt.cols.protocol = p_QV24.name
 --
 -- 
 -- Frame type decoding, note offset to skip Cisco STUN encapsualtion
--- Include STUN ID for ID at Start
 --
 	local frame = buf(9,1):uint()
 	local frametext = "undefined"
@@ -61,14 +60,14 @@ pkt.cols.protocol = p_QV24T.name
 pkt.cols.info = frametext
 --
 -- Create subtree for QV24
-	subtree = root:add(p_QV24T, buf(9))  
+	subtree = root:add(p_QV24, buf(9))  
 --
 -- Add protocol fields to subtree
 	subtree:append_text(": " .. frametext)
 --
 -- Description of payload
 	subtree:append_text(", payload")
---	
+--
 -- Description of bits before and after IMBE codeword
 	if frame == 0x62 then 
 		subtree:append_text(" LDU1 RSSI= ".. buf(15,1):uint())
@@ -133,13 +132,13 @@ pkt.cols.info = frametext
 end
 -- 
 -- Initialization routine
-function p_QV24T.init()
+function p_QV24.init()
 end
 -- 
--- Register the chained dissector for port 1994
-local tcp_dissector_table = DissectorTable.get("tcp.port")
-dissector = tcp_dissector_table:get_dissector(1994)
-tcp_dissector_table:add(1994, p_QV24T)
+-- Register the chained dissector for port 30000
+local tcp_dissector_table = DissectorTable.get("udp.port")
+dissector = tcp_dissector_table:get_dissector(30000)
+tcp_dissector_table:add(30000, p_QV24)
 --
 -- END
 
